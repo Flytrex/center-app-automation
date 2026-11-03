@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Automation Tests - Center App</title>
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --surface: #ffffff;
+    --surface-2: #f1f3f6;
+    --border: #e2e5ea;
+    --text: #1c2330;
+    --muted: #677285;
+    --accent: #2f6fde;
+    --accent-text: #ffffff;
+    --pass: #1f9d55;
+    --pass-bg: #e6f6ec;
+    --fail: #d93636;
+    --fail-bg: #fdecec;
+    --run: #c98a00;
+    --code-bg: #f6f2f2;
+    --shadow: 0 1px 2px rgba(20, 30, 50, .06), 0 1px 1px rgba(20, 30, 50, .04);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12151b;
+      --surface: #1a1e26;
+      --surface-2: #222733;
+      --border: #2d3340;
+      --text: #e6e9ef;
+      --muted: #96a0b2;
+      --accent: #5b8ff0;
+      --accent-text: #0d1220;
+      --pass: #3fcf7f;
+      --pass-bg: #163423;
+      --fail: #ff6b6b;
+      --fail-bg: #3a1c1f;
+      --run: #f0b93a;
+      --code-bg: #241c1e;
+      --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 32px 16px 64px; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+  h1 { font-size: 24px; margin: 0; letter-spacing: -.01em; }
+  .live { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+  .live.on .dot { background: var(--pass); }
+
+  .folder { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); margin-bottom: 16px; overflow: hidden; }
+  .folder .folder { margin: 0 16px 16px; }
+  .folder-head { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: var(--surface-2); border-bottom: 1px solid var(--border); cursor: pointer; user-select: none; }
+  .folder.collapsed > .folder-head { border-bottom: none; }
+  .folder.collapsed > .folder-body { display: none; }
+  .chev { color: var(--muted); transition: transform .15s; display: inline-block; width: 12px; }
+  .folder.collapsed > .folder-head .chev { transform: rotate(-90deg); }
+  .folder-name { font-weight: 600; flex: 1; display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .folder-count { color: var(--muted); font-weight: 400; font-size: 13px; }
+  .summary { display: flex; gap: 10px; font-size: 13px; color: var(--muted); }
+  .summary .p { color: var(--pass); }
+  .summary .f { color: var(--fail); }
+
+  .test { display: grid; grid-template-columns: 28px 1fr auto; gap: 12px; align-items: center; padding: 14px 16px; border-bottom: 1px solid var(--border); }
+  .folder-body > .test:last-of-type { border-bottom: none; }
+  .status { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 15px; font-weight: 700; border: 1.5px dashed var(--border); color: var(--muted); }
+  .status.passed { background: var(--pass-bg); color: var(--pass); border: none; }
+  .status.failed { background: var(--fail-bg); color: var(--fail); border: none; }
+  .status.running, .status.queued { border: 2px solid var(--border); border-top-color: var(--run); }
+  .status.running { animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .info { min-width: 0; }
+  .name { font-weight: 600; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .name a { color: inherit; text-decoration: none; }
+  .name a:hover { color: var(--accent); text-decoration: underline; }
+  .desc { color: var(--muted); font-size: 14px; }
+  .meta { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .meta.failed { color: var(--fail); }
+  details.err { grid-column: 2 / -1; margin-top: -4px; }
+  details.err summary { cursor: pointer; color: var(--fail); font-size: 13px; }
+  details.err pre { background: var(--code-bg); border-radius: 8px; padding: 10px 12px; font-size: 12px; overflow-x: auto; white-space: pre-wrap; word-break: break-word; margin: 8px 0 0; max-height: 280px; }
+
+  button { font: inherit; font-size: 14px; font-weight: 600; border-radius: 8px; padding: 7px 16px; cursor: pointer; border: 1px solid transparent; }
+  .run { background: var(--accent); color: var(--accent-text); }
+  .run:hover { filter: brightness(1.08); }
+  .run:disabled { background: var(--surface-2); color: var(--muted); border-color: var(--border); cursor: default; filter: none; }
+  .run-all { background: transparent; color: var(--accent); border-color: var(--border); padding: 5px 12px; font-size: 13px; }
+  .run-all:hover { background: var(--surface); }
+  .run-all:disabled { color: var(--muted); cursor: default; }
+  .empty { color: var(--muted); padding: 40px 16px; text-align: center; }
+  .note { color: var(--muted); font-size: 13px; margin-top: 24px; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .92em; }
+
+  @media (max-width: 560px) {
+    .test { grid-template-columns: 28px 1fr; }
+    .test > .run { grid-column: 2; justify-self: start; }
+    .summary { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Automation Tests - Center App</h1>
+    <div class="live" id="live"><span class="dot"></span><span id="live-text">Connecting…</span></div>
+  </header>
+  <main id="root"></main>
+  <p class="note">The page updates by itself when test files or folders are added, renamed or removed under <code>tests/center-app</code>. Tests run one at a time. Add a <code>// Description: …</code> line at the top of a test file to set its description.</p>
+</div>
+
+<script>
+  const root = document.getElementById('root');
+  let data = { folders: [], tests: [] };
+  const collapsed = new Set(JSON.parse(safeGet('collapsed') || '[]'));
+
+  function safeGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
+  function safeSet(k, v) { try { localStorage.setItem(k, v); } catch {} }
+
+  function esc(s) {
+    return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
+  function timeAgo(iso) {
+    if (!iso) return '';
+    const s = Math.round((Date.now() - Date.parse(iso)) / 1000);
+    if (s < 60) return 'just now';
+    if (s < 3600) return `${Math.floor(s / 60)} min ago`;
+    if (s < 86400) return `${Math.floor(s / 3600)} h ago`;
+    return new Date(iso).toLocaleString();
+  }
+
+  function testsIn(folder) {
+    return [...folder.tests, ...folder.folders.flatMap(testsIn)];
+  }
+
+  function statusIcon(status) {
+    if (status === 'passed') return '✓';
+    if (status === 'failed') return '✗';
+    return '';
+  }
+
+  function metaLine(r) {
+    if (!r || !r.status) return '<div class="meta">Not run yet</div>';
+    if (r.status === 'queued') return '<div class="meta">Waiting for the running test to finish…</div>';
+    if (r.status === 'running') return '<div class="meta">Running…</div>';
+    const secs = r.durationMs ? ` in ${(r.durationMs / 1000).toFixed(1)}s` : '';
+    const label = r.status === 'passed' ? 'Passed' : 'Failed';
+    return `<div class="meta ${r.status}">${label}${secs} · ${timeAgo(r.finishedAt)}</div>`;
+  }
+
+  function renderTest(t) {
+    const r = t.result;
+    const status = r?.status ?? '';
+    const busy = status === 'running' || status === 'queued';
+    const err = status === 'failed' && r.error
+      ? `<details class="err"><summary>Show error</summary><pre>${esc(r.error)}</pre></details>` : '';
+    return `
+      <div class="test" data-file="${esc(t.file)}">
+        <div class="status ${status}" title="${esc(status || 'not run')}">${statusIcon(status)}</div>
+        <div class="info">
+          <div class="name"><a href="vscode://file/${encodeURI(t.abs)}" title="Open in VS Code">${esc(t.name)}</a></div>
+          <div class="desc">${esc(t.description)}</div>
+          ${metaLine(r)}
+        </div>
+        <button class="run" data-run="${esc(t.file)}" ${busy ? 'disabled' : ''}>${status === 'running' ? 'Running' : status === 'queued' ? 'Queued' : 'Run'}</button>
+        ${err}
+      </div>`;
+  }
+
+  function renderFolder(f) {
+    const all = testsIn(f);
+    const passed = all.filter((t) => t.result?.status === 'passed').length;
+    const failed = all.filter((t) => t.result?.status === 'failed').length;
+    const busy = all.length && all.every((t) => ['running', 'queued'].includes(t.result?.status));
+    return `
+      <section class="folder ${collapsed.has(f.path) ? 'collapsed' : ''}" data-path="${esc(f.path)}">
+        <div class="folder-head" data-toggle="${esc(f.path)}">
+          <span class="chev">▾</span>
+          <span class="folder-name">📁 ${esc(f.name)} <span class="folder-count">${all.length} test${all.length === 1 ? '' : 's'}</span></span>
+          <span class="summary">${passed ? `<span class="p">✓ ${passed}</span>` : ''}${failed ? `<span class="f">✗ ${failed}</span>` : ''}</span>
+          <button class="run-all" data-run-all="${esc(f.path)}" ${busy || !all.length ? 'disabled' : ''}>Run all</button>
+        </div>
+        <div class="folder-body">
+          ${f.tests.map(renderTest).join('')}
+          ${f.folders.map(renderFolder).join('')}
+          ${!f.tests.length && !f.folders.length ? '<div class="empty">No tests yet.</div>' : ''}
+        </div>
+      </section>`;
+  }
+
+  function render() {
+    // Keep open error panels open across re-renders
+    const openErrors = new Set([...root.querySelectorAll('details.err[open]')].map((d) => d.closest('.test').dataset.file));
+    if (!data.folders.length && !data.tests.length) {
+      root.innerHTML = '<div class="empty">No test files found under <code>tests/center-app</code>.</div>';
+      return;
+    }
+    const loose = data.tests.length ? renderFolder({ name: 'Center App', path: '__root__', tests: data.tests, folders: [] }) : '';
+    root.innerHTML = loose + data.folders.map(renderFolder).join('');
+    for (const file of openErrors) {
+      root.querySelector(`.test[data-file="${CSS.escape(file)}"] details.err`)?.setAttribute('open', '');
+    }
+  }
+
+  function findFolder(path, folders = data.folders) {
+    for (const f of folders) {
+      if (f.path === path) return f;
+      const found = findFolder(path, f.folders);
+      if (found) return found;
+    }
+    return path === '__root__' ? { tests: data.tests, folders: [] } : null;
+  }
+
+  function eachTest(fn, folders = data.folders, tests = data.tests) {
+    tests.forEach(fn);
+    folders.forEach((f) => eachTest(fn, f.folders, f.tests));
+  }
+
+  async function load() {
+    const res = await fetch('/api/tests');
+    data = await res.json();
+    render();
+  }
+
+  async function run(files) {
+    await fetch('/api/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ files }) });
+  }
+
+  root.addEventListener('click', (e) => {
+    const runBtn = e.target.closest('[data-run]');
+    if (runBtn) return run([runBtn.dataset.run]);
+    const allBtn = e.target.closest('[data-run-all]');
+    if (allBtn) {
+      e.stopPropagation();
+      const f = findFolder(allBtn.dataset.runAll);
+      if (f) run(testsIn(f).map((t) => t.file));
+      return;
+    }
+    const head = e.target.closest('[data-toggle]');
+    if (head) {
+      const p = head.dataset.toggle;
+      collapsed.has(p) ? collapsed.delete(p) : collapsed.add(p);
+      safeSet('collapsed', JSON.stringify([...collapsed]));
+      head.parentElement.classList.toggle('collapsed');
+    }
+  });
+
+  function connect() {
+    const live = document.getElementById('live');
+    const liveText = document.getElementById('live-text');
+    const es = new EventSource('/events');
+    es.addEventListener('hello', () => { live.classList.add('on'); liveText.textContent = 'Live'; load(); });
+    es.addEventListener('tree', load);
+    es.addEventListener('result', (e) => {
+      const { file, result } = JSON.parse(e.data);
+      eachTest((t) => { if (t.file === file) t.result = result; });
+      render();
+    });
+    es.onerror = () => { live.classList.remove('on'); liveText.textContent = 'Disconnected — is the dashboard server running?'; };
+  }
+
+  load().catch(() => {});
+  connect();
+  // Refresh the "x min ago" labels
+  setInterval(render, 60_000);
+</script>
+</body>
+</html>

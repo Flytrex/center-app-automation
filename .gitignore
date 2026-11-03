@@ -1,0 +1,18 @@
+
+# Playwright
+node_modules/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
+
+# Dashboard run history
+/dashboard/results.json
+
+.DS_Store
+.env
+playwright/.auth/
+.playwright-mcp/
+*.kml
+playwright/.profile/
